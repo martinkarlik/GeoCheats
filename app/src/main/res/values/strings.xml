@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">GeoCheats</string>
+    <string name="fragment_about_content">This is GeoCheats. It helps you cheat on GeoGuessr. Good luck!</string>
+    <string name="start_cheating">Start cheating</string>
+    <string name="fragment_credits">Martin made this shitty app.</string>
+</resources>
