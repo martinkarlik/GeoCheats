@@ -8,6 +8,9 @@
         android:id="@+id/creditsFragment"
         android:title="@string/credits" />
     <item
+        android:id="@+id/mapsFragment"
+        android:title="@string/maps" />
+    <item
         android:id="@+id/howToFragment"
         android:title="@string/how_to_use" />
 </menu>
