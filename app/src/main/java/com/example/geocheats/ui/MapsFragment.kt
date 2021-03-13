@@ -25,6 +25,8 @@ class MapsFragment : Fragment() {
         googleMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
         googleMap.addMarker(MarkerOptions().position(some_other_place).title("Marker somewhere else"))
         googleMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
+
+        // https://github.com/googlemaps/android-samples/blob/master/ApiDemos/kotlin/app/src/gms/java/com/example/kotlindemos/BasicMapDemoActivity.kt
     }
 
     override fun onCreateView(
