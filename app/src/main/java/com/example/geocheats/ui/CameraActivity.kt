@@ -49,6 +49,8 @@ class CameraActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        print("Did I fix it??????")
+
         binding = DataBindingUtil.setContentView(this, R.layout.activity_camera)
         binding.setLifecycleOwner(this)
 
