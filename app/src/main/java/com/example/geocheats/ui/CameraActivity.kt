@@ -5,6 +5,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Rect
 import android.net.Uri
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -18,14 +19,17 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.geocheats.R
 import com.example.geocheats.database.CountryDatabase
 import com.example.geocheats.databinding.ActivityCameraBinding
-import com.example.geocheats.ml.LiteModelOnDeviceVisionClassifierLandmarksClassifierEuropeV11
+import com.example.geocheats.ml.Planet
 import com.example.geocheats.toBitmap
 import com.example.geocheats.toByteArray
 import kotlinx.android.synthetic.main.activity_camera.*
+import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.image.TensorImage
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import timber.log.Timber
 import java.io.File
 import java.nio.ByteBuffer
+import java.nio.FloatBuffer
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -36,8 +40,9 @@ class CameraActivity : AppCompatActivity() {
     private var imageCapture: ImageCapture? = null
     private lateinit var outputDirectory: File
     private lateinit var cameraExecutor: ExecutorService
-    private val tf_model by lazy {
-        LiteModelOnDeviceVisionClassifierLandmarksClassifierEuropeV11.newInstance(this)
+
+    private val planet by lazy {
+        Planet.newInstance(this)
     }
 
 
@@ -49,7 +54,6 @@ class CameraActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        print("Did I fix it??????")
 
         binding = DataBindingUtil.setContentView(this, R.layout.activity_camera)
         binding.setLifecycleOwner(this)
@@ -126,17 +130,25 @@ class CameraActivity : AppCompatActivity() {
 
                 Timber.i("Dims: ${image.width}, ${image.height}")
 
-                val image_bitmap = image.toBitmap()
-
-                viewModel.onCapture(image_bitmap)
-
-                val outputs = tf_model.process(TensorImage.fromBitmap(image_bitmap))
-                val probability = outputs.probabilityAsCategoryList
-
-                val prediction = probability.maxByOrNull { it.score }!!
+                val imageBitmap = image.toBitmap()
+                viewModel.onCapture(imageBitmap)
 
 
-                viewModel.onCountryGuessed(prediction.label, prediction.score)
+                Timber.i("Byte count: %d", imageBitmap.byteCount)
+                Timber.i("Byte count: %d", imageBitmap.allocationByteCount)
+                Timber.i("Bitmap shape: %d %d %d", imageBitmap.width, imageBitmap.height, imageBitmap.density)
+
+                val buffer: ByteBuffer = ByteBuffer.allocate(299*299*3)
+                val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, 299, 299, 3), DataType.FLOAT32)
+
+                Timber.i("Expected size: %s", inputFeature0.flatSize.toString())
+                inputFeature0.loadBuffer(buffer)
+
+                // Runs model inference and gets result.
+                val outputs = planet.process(inputFeature0).outputFeature0AsTensorBuffer
+                val index = outputs.floatArray.indices.maxByOrNull { outputs.floatArray[it] }
+
+                Timber.v("Maximum index, maximum value: %d %f", index, outputs.floatArray[index!!])
 
 
                 image.close()
@@ -201,7 +213,7 @@ class CameraActivity : AppCompatActivity() {
             val imageAnalyzer = ImageAnalysis.Builder()
                     .build()
                     .also {
-                        it.setAnalyzer(cameraExecutor, LandmarkAnalyzer(tf_model) { bitmap, label ->
+                        it.setAnalyzer(cameraExecutor, LandmarkAnalyzer(planet) { bitmap, label ->
                             viewModel.onCapture(bitmap)
                             viewModel.onCountryGuessed(label, 1.0f)
                            Timber.i("Landmark guess: $label")
@@ -231,7 +243,7 @@ class CameraActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
-        tf_model.close()
+        planet.close()
     }
 
     companion object {
@@ -243,27 +255,25 @@ class CameraActivity : AppCompatActivity() {
 }
 
 
-private class LandmarkAnalyzer(private val model: LiteModelOnDeviceVisionClassifierLandmarksClassifierEuropeV11,
+private class LandmarkAnalyzer(private val model: Planet,
                                  private val listener: LandmarkListener) : ImageAnalysis.Analyzer {
-
 
 
     override fun analyze(image: ImageProxy) {
 
         val image_bitmap = image.toBitmap()
+//
+//        val outputs = model.process(TensorImage.fromBitmap(image_bitmap))
+//        val probability = outputs.probabilityAsCategoryList
 
-        val outputs = model.process(TensorImage.fromBitmap(image_bitmap))
-        val probability = outputs.probabilityAsCategoryList
-
-        val prediction = probability.maxByOrNull { it.score }!!
+//        val prediction = probability.maxByOrNull { it.score }!!
 
 
-        listener(image_bitmap, prediction.label)
+//        listener(image_bitmap, prediction.label)
 
 
         image.close()
     }
-
 
 
 }
