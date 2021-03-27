@@ -17,6 +17,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.ViewModelProvider
 import com.example.geocheats.R
+import com.example.geocheats.copyRGBToBuffer
 import com.example.geocheats.database.CountryDatabase
 import com.example.geocheats.databinding.ActivityCameraBinding
 import com.example.geocheats.ml.Planet
@@ -33,6 +34,8 @@ import java.nio.FloatBuffer
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
+import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
+
 typealias LandmarkListener = (landmark: Bitmap, label: String) -> Unit
 
 class CameraActivity : AppCompatActivity() {
@@ -64,7 +67,6 @@ class CameraActivity : AppCompatActivity() {
         binding.viewModel = viewModel
 
         viewModel.capturedImage.observe(this, androidx.lifecycle.Observer {
-            Timber.i("Setting the image to ${it?.height}, ${it?.width} sized bitmap.")
             binding.imageView.setImageBitmap(it)
         })
 
@@ -134,21 +136,31 @@ class CameraActivity : AppCompatActivity() {
                 viewModel.onCapture(imageBitmap)
 
 
-                Timber.i("Byte count: %d", imageBitmap.byteCount)
-                Timber.i("Byte count: %d", imageBitmap.allocationByteCount)
-                Timber.i("Bitmap shape: %d %d %d", imageBitmap.width, imageBitmap.height, imageBitmap.density)
+                val imageBuffer = imageBitmap.copyRGBToBuffer()
 
-                val buffer: ByteBuffer = ByteBuffer.allocate(299*299*3)
                 val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, 299, 299, 3), DataType.FLOAT32)
+                inputFeature0.loadBuffer(imageBuffer)
 
-                Timber.i("Expected size: %s", inputFeature0.flatSize.toString())
-                inputFeature0.loadBuffer(buffer)
+                val outputs = planet.process(inputFeature0)
+                val outputsAsTensorBuffer = outputs.outputFeature0AsTensorBuffer
+                val index = outputsAsTensorBuffer.floatArray.indices.maxByOrNull { outputsAsTensorBuffer.floatArray[it] }
 
-                // Runs model inference and gets result.
-                val outputs = planet.process(inputFeature0).outputFeature0AsTensorBuffer
-                val index = outputs.floatArray.indices.maxByOrNull { outputs.floatArray[it] }
+                Timber.i("Output flat size: %s".format(outputsAsTensorBuffer.flatSize.toString()))
+                Timber.i("Output at 0, 1, 2: %f %f %f".format(outputsAsTensorBuffer.floatArray[0], outputsAsTensorBuffer.floatArray[1], outputsAsTensorBuffer.floatArray[2]))
 
-                Timber.v("Maximum index, maximum value: %d %f", index, outputs.floatArray[index!!])
+                Timber.i("Maximum index, maximum value: %d %f", index, outputsAsTensorBuffer.floatArray[index!!])
+
+
+                var geolocationCode = ""
+                csvReader().open(resources.openRawResource(R.raw.planet_v2_labelmap)) {
+                    readAllAsSequence().forEach { row: List<String> ->
+                        if (row[0] == index.toString()) {
+                            geolocationCode = row[1]
+                        }
+                    }
+                }
+
+
 
 
                 image.close()
