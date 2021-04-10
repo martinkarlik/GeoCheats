@@ -225,15 +225,6 @@ class CameraActivity : AppCompatActivity() {
                 }
 
             imageCapture = ImageCapture.Builder().build()
-            val imageAnalyzer = ImageAnalysis.Builder()
-                    .build()
-                    .also {
-                        it.setAnalyzer(cameraExecutor, LandmarkAnalyzer(planet) { bitmap, label ->
-                            viewModel.onCapture(bitmap)
-                            viewModel.onCountryGuessed(label, 1.0f)
-                           Timber.i("Landmark guess: $label")
-                        })
-                    }
 
             // Select back camera as a default
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
@@ -267,30 +258,6 @@ class CameraActivity : AppCompatActivity() {
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
     }
-}
-
-
-private class LandmarkAnalyzer(private val model: Planet,
-                                 private val listener: LandmarkListener) : ImageAnalysis.Analyzer {
-
-
-    override fun analyze(image: ImageProxy) {
-
-        val image_bitmap = image.toBitmap()
-//
-//        val outputs = model.process(TensorImage.fromBitmap(image_bitmap))
-//        val probability = outputs.probabilityAsCategoryList
-
-//        val prediction = probability.maxByOrNull { it.score }!!
-
-
-//        listener(image_bitmap, prediction.label)
-
-
-        image.close()
-    }
-
-
 }
 
 
