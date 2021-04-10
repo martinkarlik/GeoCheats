@@ -1,4 +1,4 @@
-package com.example.geocheats
+package com.example.geocheats.utils
 
 import android.app.Application
 import timber.log.Timber

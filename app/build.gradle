@@ -90,6 +90,8 @@ dependencies {
     implementation "com.github.bumptech.glide:glide:4.8.0"
 
     implementation "com.github.doyaaaaaken:kotlin-csv-jvm:0.15.1"
+    implementation "org.isuper:s2-geometry-library-java:0.0.1"
+    implementation 'com.google.guava:guava:27.0.1-android'
 
     testImplementation 'junit:junit:4.+'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'

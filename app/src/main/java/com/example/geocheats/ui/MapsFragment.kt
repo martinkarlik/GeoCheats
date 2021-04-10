@@ -20,11 +20,12 @@ import com.google.android.gms.maps.model.MarkerOptions
 class MapsFragment : Fragment() {
 
     private val callback = OnMapReadyCallback { googleMap ->
-        val sydney = LatLng(-34.0, 151.0)
-        val some_other_place = LatLng(34.0, 22.0)
-        googleMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
-        googleMap.addMarker(MarkerOptions().position(some_other_place).title("Marker somewhere else"))
-        googleMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
+        val guess = LatLng(-34.0, 151.0)
+        val someOtherPlace = LatLng(34.0, 22.0)
+
+        googleMap.addMarker(MarkerOptions().position(guess).title("Marker in Sydney"))
+        googleMap.addMarker(MarkerOptions().position(someOtherPlace).title("Marker somewhere else"))
+        googleMap.moveCamera(CameraUpdateFactory.newLatLng(guess))
 
         // https://github.com/googlemaps/android-samples/blob/master/ApiDemos/kotlin/app/src/gms/java/com/example/kotlindemos/BasicMapDemoActivity.kt
     }

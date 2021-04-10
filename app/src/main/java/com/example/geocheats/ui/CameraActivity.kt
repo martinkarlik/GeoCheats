@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.graphics.Rect
 import android.net.Uri
 import android.widget.Toast
@@ -17,12 +16,11 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.ViewModelProvider
 import com.example.geocheats.R
-import com.example.geocheats.copyRGBToBuffer
+import com.example.geocheats.utils.copyRGBToBuffer
 import com.example.geocheats.database.CountryDatabase
 import com.example.geocheats.databinding.ActivityCameraBinding
 import com.example.geocheats.ml.Planet
-import com.example.geocheats.toBitmap
-import com.example.geocheats.toByteArray
+import com.example.geocheats.utils.toBitmap
 import kotlinx.android.synthetic.main.activity_camera.*
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.image.TensorImage
@@ -35,6 +33,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
+import com.google.common.geometry.S2CellId
 
 typealias LandmarkListener = (landmark: Bitmap, label: String) -> Unit
 
@@ -59,7 +58,7 @@ class CameraActivity : AppCompatActivity() {
 
 
         binding = DataBindingUtil.setContentView(this, R.layout.activity_camera)
-        binding.setLifecycleOwner(this)
+        binding.lifecycleOwner = this
 
         viewModelFactory = CameraViewModelFactory(CountryDatabase.getInstance(application).dao, application)
         viewModel = ViewModelProvider(this, viewModelFactory).get(CameraViewModel::class.java)
@@ -145,22 +144,26 @@ class CameraActivity : AppCompatActivity() {
                 val outputsAsTensorBuffer = outputs.outputFeature0AsTensorBuffer
                 val index = outputsAsTensorBuffer.floatArray.indices.maxByOrNull { outputsAsTensorBuffer.floatArray[it] }
 
-                Timber.i("Output flat size: %s".format(outputsAsTensorBuffer.flatSize.toString()))
-                Timber.i("Output at 0, 1, 2: %f %f %f".format(outputsAsTensorBuffer.floatArray[0], outputsAsTensorBuffer.floatArray[1], outputsAsTensorBuffer.floatArray[2]))
+//                Timber.i("Output flat size: %s".format(outputsAsTensorBuffer.flatSize.toString()))
+//                Timber.i("Output at 0, 1, 2: %f %f %f".format(outputsAsTensorBuffer.floatArray[0], outputsAsTensorBuffer.floatArray[1], outputsAsTensorBuffer.floatArray[2]))
+//                Timber.i("Maximum index, maximum value: %d %f", index, outputsAsTensorBuffer.floatArray[index!!])
 
-                Timber.i("Maximum index, maximum value: %d %f", index, outputsAsTensorBuffer.floatArray[index!!])
+
+                var geolocationToken = ""
 
 
-                var geolocationCode = ""
                 csvReader().open(resources.openRawResource(R.raw.planet_v2_labelmap)) {
                     readAllAsSequence().forEach { row: List<String> ->
-                        if (row[0] == index.toString()) {
-                            geolocationCode = row[1]
+                        if (row[0] == "21") {
+                            geolocationToken = row[1]
                         }
                     }
                 }
 
+                val ll = S2CellId.fromToken(geolocationToken).toLatLng()
 
+                Timber.i("The geo code: %s".format(geolocationToken))
+                Timber.i("Lat lang: %f %f".format(ll.lat().degrees(), ll.lng().degrees()))
 
 
                 image.close()
