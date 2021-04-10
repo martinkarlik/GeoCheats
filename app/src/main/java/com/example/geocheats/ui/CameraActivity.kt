@@ -35,7 +35,6 @@ import java.util.concurrent.ExecutorService
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
 import com.google.common.geometry.S2CellId
 
-typealias LandmarkListener = (landmark: Bitmap, label: String) -> Unit
 
 class CameraActivity : AppCompatActivity() {
 
