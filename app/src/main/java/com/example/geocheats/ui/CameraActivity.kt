@@ -1,39 +1,48 @@
 package com.example.geocheats.ui
 
-import android.os.Bundle
 import android.Manifest
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.Rect
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Bundle
+import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import java.util.concurrent.Executors
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.view.isGone
+import androidx.core.view.isVisible
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.ViewModelProvider
 import com.example.geocheats.R
-import com.example.geocheats.utils.copyRGBToBuffer
-import com.example.geocheats.database.CountryDatabase
+import com.example.geocheats.database.GuessDatabase
 import com.example.geocheats.databinding.ActivityCameraBinding
 import com.example.geocheats.ml.Planet
+import com.example.geocheats.utils.copyRGBToBuffer
+import com.example.geocheats.utils.resize
 import com.example.geocheats.utils.toBitmap
+import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MarkerOptions
+import com.google.common.geometry.S2CellId
 import kotlinx.android.synthetic.main.activity_camera.*
 import org.tensorflow.lite.DataType
-import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
+import org.tensorflow.lite.Interpreter
+import org.tensorflow.lite.support.image.TensorImage
 import timber.log.Timber
 import java.io.File
 import java.nio.ByteBuffer
-import java.nio.FloatBuffer
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
-import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
-import com.google.common.geometry.S2CellId
+import java.util.concurrent.Executors
+import kotlin.math.roundToInt
 
 
 class CameraActivity : AppCompatActivity() {
@@ -46,11 +55,9 @@ class CameraActivity : AppCompatActivity() {
         Planet.newInstance(this)
     }
 
-
     private lateinit var binding: ActivityCameraBinding
     private lateinit var viewModelFactory: CameraViewModelFactory
     private lateinit var viewModel: CameraViewModel
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,58 +66,77 @@ class CameraActivity : AppCompatActivity() {
         binding = DataBindingUtil.setContentView(this, R.layout.activity_camera)
         binding.lifecycleOwner = this
 
-        viewModelFactory = CameraViewModelFactory(CountryDatabase.getInstance(application).dao, application)
+
+        viewModelFactory = CameraViewModelFactory(GuessDatabase.getInstance(application).dao, application)
         viewModel = ViewModelProvider(this, viewModelFactory).get(CameraViewModel::class.java)
 
         binding.viewModel = viewModel
+        val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
+
+
+
+        viewModel.state.observe(this) {
+            if (it == "MAP") {
+                mapFragment?.getMapAsync { googleMap ->
+                    val guess = viewModel.guess.value?.lat?.let { it1 -> viewModel.guess.value?.lng?.let { it2 -> LatLng(it1, it2) } }
+
+                    if (guess != null) {
+                        googleMap.clear()
+                        googleMap.addMarker(MarkerOptions().position(guess).title("My best guess!"))
+                        googleMap.moveCamera(CameraUpdateFactory.newLatLng(guess))
+                    }
+
+                }
+
+                mapView.isVisible = true
+                cameraView.isGone = true
+            } else if (it == "CAMERA") {
+                cameraView.isVisible = true
+                mapView.isGone = true
+            }
+        }
 
         viewModel.capturedImage.observe(this, androidx.lifecycle.Observer {
-            binding.imageView.setImageBitmap(it)
+            binding.capturedImage.setImageBitmap(it)
         })
 
 
-        // Request camera permissions
+
+
+        cameraCaptureButton.setOnClickListener {
+            processPhoto()
+        }
+
+        outputDirectory = getOutputDirectory()
+        cameraExecutor = Executors.newSingleThreadExecutor()
+
         if (allPermissionsGranted()) {
             startCamera()
         } else {
             ActivityCompat.requestPermissions(
-                this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
+                    this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS)
         }
-
-
-
-        // Set up the listener for take photo button
-        camera_capture_button.setOnClickListener {
-            processPhoto()
-        }
-
-
-        outputDirectory = getOutputDirectory()
-        cameraExecutor = Executors.newSingleThreadExecutor()
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(
-            baseContext, it) == PackageManager.PERMISSION_GRANTED
+                baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
 
     override fun onRequestPermissionsResult(
-        requestCode: Int, permissions: Array<String>, grantResults:
-        IntArray) {
+            requestCode: Int, permissions: Array<String>, grantResults:
+            IntArray) {
         if (requestCode == REQUEST_CODE_PERMISSIONS) {
             if (allPermissionsGranted()) {
                 startCamera()
             } else {
                 Toast.makeText(this,
-                    "Permissions not granted by the user.",
-                    Toast.LENGTH_SHORT).show()
+                        "Permissions not granted by the user.",
+                        Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
     }
-
-
-
 
     private fun getOutputDirectory(): File {
         val mediaDir = externalMediaDirs.firstOrNull()?.let {
@@ -118,6 +144,9 @@ class CameraActivity : AppCompatActivity() {
         return if (mediaDir != null && mediaDir.exists())
             mediaDir else filesDir
     }
+
+
+
 
 
     private fun processPhoto() {
@@ -128,41 +157,52 @@ class CameraActivity : AppCompatActivity() {
             override fun onCaptureSuccess(image: ImageProxy) {
                 super.onCaptureSuccess(image)
 
-                Timber.i("Dims: ${image.width}, ${image.height}")
+                var imageBitmap = BitmapFactory.decodeResource(resources, R.mipmap.hasseris)
+//                var imageBitmap = image.toBitmap()
 
-                val imageBitmap = image.toBitmap()
-                viewModel.onCapture(imageBitmap)
-
-
+                viewModel.onCapture(imageBitmap.resize(640, 480))
+                imageBitmap = imageBitmap.resize(299, 299)
                 val imageBuffer = imageBitmap.copyRGBToBuffer()
+                
 
                 val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, 299, 299, 3), DataType.FLOAT32)
                 inputFeature0.loadBuffer(imageBuffer)
+
+
 
                 val outputs = planet.process(inputFeature0)
                 val outputsAsTensorBuffer = outputs.outputFeature0AsTensorBuffer
                 val index = outputsAsTensorBuffer.floatArray.indices.maxByOrNull { outputsAsTensorBuffer.floatArray[it] }
 
-//                Timber.i("Output flat size: %s".format(outputsAsTensorBuffer.flatSize.toString()))
-//                Timber.i("Output at 0, 1, 2: %f %f %f".format(outputsAsTensorBuffer.floatArray[0], outputsAsTensorBuffer.floatArray[1], outputsAsTensorBuffer.floatArray[2]))
-//                Timber.i("Maximum index, maximum value: %d %f", index, outputsAsTensorBuffer.floatArray[index!!])
+
+                Timber.i("Output flat size: %s".format(outputsAsTensorBuffer.flatSize.toString()))
+                Timber.i("Output at 0, 1, 2: %f %f %f".format(outputsAsTensorBuffer.floatArray[0], outputsAsTensorBuffer.floatArray[1], outputsAsTensorBuffer.floatArray[2]))
+                Timber.i("Maximum index, maximum value: %d %f", index, outputsAsTensorBuffer.floatArray[index!!])
 
 
                 var geolocationToken = ""
 
 
+
+                val randomLocationCode = (Math.random() * 9000).roundToInt().toString()
+
                 csvReader().open(resources.openRawResource(R.raw.planet_v2_labelmap)) {
                     readAllAsSequence().forEach { row: List<String> ->
-                        if (row[0] == "21") {
+                        if (row[0] == randomLocationCode) {
                             geolocationToken = row[1]
                         }
                     }
                 }
 
-                val ll = S2CellId.fromToken(geolocationToken).toLatLng()
+                val s2LatLng = S2CellId.fromToken(geolocationToken).toLatLng()
+
+                val latLng = Pair(s2LatLng.lat().degrees(), s2LatLng.lng().degrees())
+
 
                 Timber.i("The geo code: %s".format(geolocationToken))
-                Timber.i("Lat lang: %f %f".format(ll.lat().degrees(), ll.lng().degrees()))
+                Timber.i("Lat lang: %f %f".format(latLng.first, latLng.second))
+
+                viewModel.onGuessed(latLng, 1.0f)
 
 
                 image.close()
@@ -182,9 +222,9 @@ class CameraActivity : AppCompatActivity() {
 
         // Create time-stamped output file to hold the image
         val photoFile = File(
-            outputDirectory,
-            SimpleDateFormat(FILENAME_FORMAT, Locale.US
-            ).format(System.currentTimeMillis()) + ".jpg")
+                outputDirectory,
+                SimpleDateFormat(FILENAME_FORMAT, Locale.US
+                ).format(System.currentTimeMillis()) + ".jpg")
 
 
 
@@ -195,18 +235,18 @@ class CameraActivity : AppCompatActivity() {
         // been taken
 
         imageCapture.takePicture(
-            outputOptions, ContextCompat.getMainExecutor(this), object : ImageCapture.OnImageSavedCallback {
-                override fun onError(exc: ImageCaptureException) {
-                    Timber.i( "Photo capture failed: ${exc.message}")
-                }
+                outputOptions, ContextCompat.getMainExecutor(this), object : ImageCapture.OnImageSavedCallback {
+            override fun onError(exc: ImageCaptureException) {
+                Timber.i("Photo capture failed: ${exc.message}")
+            }
 
-                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    val savedUri = Uri.fromFile(photoFile)
-                    val msg = "Photo capture succeeded: $savedUri"
-                    Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-                    Timber.i(msg)
-                }
-            })
+            override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                val savedUri = Uri.fromFile(photoFile)
+                val msg = "Photo capture succeeded: $savedUri"
+                Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+                Timber.i(msg)
+            }
+        })
     }
 
     private fun startCamera() {
@@ -218,10 +258,10 @@ class CameraActivity : AppCompatActivity() {
 
             // Preview
             val preview = Preview.Builder()
-                .build()
-                .also {
-                    it.setSurfaceProvider(viewFinder.surfaceProvider)
-                }
+                    .build()
+                    .also {
+                        it.setSurfaceProvider(viewFinder.surfaceProvider)
+                    }
 
             imageCapture = ImageCapture.Builder().build()
 
@@ -234,15 +274,22 @@ class CameraActivity : AppCompatActivity() {
 
                 // Bind use cases to camera
                 cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview, imageCapture)
+                        this, cameraSelector, preview, imageCapture)
 
-            } catch(exc: Exception) {
+            } catch (exc: Exception) {
                 Timber.i("Use case binding failed: ${exc.message}")
             }
 
         }, ContextCompat.getMainExecutor(this))
     }
 
+    override fun onBackPressed() {
+        if (viewModel.state.value == "MAP") {
+            viewModel.onReturnToPreview()
+        } else {
+            super.onBackPressed()
+        }
+    }
 
 
     override fun onDestroy() {

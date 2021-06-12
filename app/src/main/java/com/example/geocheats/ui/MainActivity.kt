@@ -9,7 +9,6 @@ import androidx.navigation.NavDestination
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI
 import com.example.geocheats.R
-import com.example.geocheats.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
@@ -19,7 +18,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val binding = DataBindingUtil.setContentView<ActivityMainBinding>(this, R.layout.activity_main)
+        val binding = DataBindingUtil.setContentView<com.example.geocheats.databinding.ActivityMainBinding>(this, R.layout.activity_main)
 
         drawerLayout = binding.drawerLayout
 

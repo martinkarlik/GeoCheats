@@ -14,71 +14,78 @@
 <!--            type="com.example.geocheats.database.Country" />-->
     </data>
 
-
-
-    <androidx.constraintlayout.widget.ConstraintLayout
-
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:context=".ui.MainActivity">
+        android:orientation="horizontal">
 
-        <androidx.camera.view.PreviewView
-            android:id="@+id/viewFinder"
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/cameraView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            tools:layout_editor_absoluteX="-20dp"
-            tools:layout_editor_absoluteY="108dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" >
-        </androidx.camera.view.PreviewView>
+            android:visibility="visible">
+
+            <androidx.camera.view.PreviewView
+                android:id="@+id/viewFinder"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.0"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintVertical_bias="1.0" />
+
+            <Button
+                android:id="@+id/cameraCaptureButton"
+                android:layout_width="162dp"
+                android:layout_height="89dp"
+                android:background="#682222"
+                android:elevation="2dp"
+                android:fontFamily="@font/comfortaa"
+                android:scaleType="fitCenter"
+                android:text="@string/capture"
+                android:textColor="#FFFFFF"
+                android:translationY="200dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/mapView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <fragment
+                android:id="@+id/map"
+                android:name="com.google.android.gms.maps.SupportMapFragment"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                tools:context=".ui.MapsFragment" />
+
+            <ImageView
+                android:id="@+id/capturedImage"
+                android:layout_width="240dp"
+                android:layout_height="180dp"
+                android:contentDescription="@string/best_guess"
+                android:translationY="200dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/ic_baseline_bar_chart_24" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </LinearLayout>
 
 
 
-        <TextView
-            android:id="@+id/countryTextView"
-            android:layout_width="263dp"
-            android:layout_height="72dp"
-            android:fontFamily="@font/comfortaa"
-            android:text="@{viewModel.country.name}"
-            android:textAlignment="center"
-            android:textColor="#A672DA"
-            android:textSize="36sp"
-            app:layout_constraintBottom_toTopOf="@+id/camera_capture_button"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <ImageView
-            android:id="@+id/imageView"
-            android:layout_width="84dp"
-            android:layout_height="63dp"
-            android:contentDescription="Image"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/camera_capture_button"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/countryTextView"
-            app:srcCompat="@drawable/ic_baseline_bar_chart_24" />
-
-        <Button
-            android:id="@+id/camera_capture_button"
-            android:layout_width="162dp"
-            android:layout_height="89dp"
-            android:background="#682222"
-            android:elevation="2dp"
-            android:fontFamily="@font/comfortaa"
-            android:scaleType="fitCenter"
-            android:text="@string/capture"
-            android:textColor="#FFFFFF"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/imageView"
-            app:layout_constraintTop_toBottomOf="@+id/countryTextView" />
 
 
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
 
 
 

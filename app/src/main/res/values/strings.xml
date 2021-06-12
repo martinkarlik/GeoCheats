@@ -1,7 +1,5 @@
 <resources>
     <string name="app_name">GeoCheats</string>
-    <string name="google_maps_api_key" templateMergeStrategy="preserve" translatable="false">AIzaSyDBpHGJwk-w-qlUwWAwBCb717dMhGx-YNU</string>
-
     <string name="fragment_about_content">This is GeoCheats. It helps you cheat on GeoGuessr. Good luck!</string>
     <string name="start_cheating">Start cheating</string>
     <string name="fragment_credits">Martin made this shitty app.</string>
@@ -13,4 +11,5 @@
     <string name="how_to_use">How to use</string>
     <string name="capture">Capture</string>
     <string name="empty_string" />
+    <string name="best_guess">My best guess!</string>
 </resources>

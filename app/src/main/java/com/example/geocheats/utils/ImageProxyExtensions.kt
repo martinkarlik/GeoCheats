@@ -11,8 +11,6 @@ fun ImageProxy.toBitmap(): Bitmap {
     val bytes = ByteArray(buffer.remaining())
     buffer[bytes]
 
-    val origBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-    val bitmapRgb: Bitmap = origBitmap.copy(Bitmap.Config.ARGB_8888, true)
-    return Bitmap.createScaledBitmap(bitmapRgb, 299, 299, false)
+    return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 
 }

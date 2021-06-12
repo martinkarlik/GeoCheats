@@ -5,23 +5,21 @@ import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import com.example.geocheats.database.Country
-import com.example.geocheats.database.CountryDao
+import com.example.geocheats.database.Guess
+import com.example.geocheats.database.GuessDao
+import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.DEFAULT_CONCURRENCY
-import timber.log.Timber
 
-class CameraViewModel(val database: CountryDao, application: Application) : AndroidViewModel(application) {
+class CameraViewModel(val database: GuessDao, application: Application) : AndroidViewModel(application) {
 
     private val viewModelJob = Job()
     private val uiScope = CoroutineScope(Dispatchers.Main + viewModelJob)
 
-    private val _country: MutableLiveData<Country?> by lazy {
-        MutableLiveData<Country?>()
+    private val _guess: MutableLiveData<Guess?> by lazy {
+        MutableLiveData<Guess?>()
     }
-    val country: LiveData<Country?>
-        get() = _country
+    val guess: LiveData<Guess?>
+        get() = _guess
 
     private val _capturedImage: MutableLiveData<Bitmap?> by lazy {
         MutableLiveData<Bitmap?>()
@@ -29,23 +27,35 @@ class CameraViewModel(val database: CountryDao, application: Application) : Andr
     val capturedImage: LiveData<Bitmap?>
         get() = _capturedImage
 
+    private val _state: MutableLiveData<String?> by lazy {
+        MutableLiveData<String?>()
+    }
+    val state: LiveData<String?>
+        get() = _state
+
+
 
     fun onCapture(bitmap: Bitmap) {
         _capturedImage.value = bitmap
 
     }
 
-    fun onCountryGuessed(name: String, confidence: Float) {
-        _country.value = Country(name = name, confidence = confidence)
+    fun onGuessed(latLng: Pair<Double, Double>, confidence: Float) {
+        _state.value = "MAP"
+        _guess.value = Guess(lat = latLng.first, lng = latLng.second, confidence = confidence)
+
 
         uiScope.launch {
 
             withContext(Dispatchers.IO) {
-                database.insert(_country.value!!)
+                database.insert(_guess.value!!)
             }
         }
     }
 
+    fun onReturnToPreview() {
+        _state.value = "CAMERA"
+    }
 
 
     override fun onCleared() {

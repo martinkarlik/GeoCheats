@@ -7,14 +7,8 @@ import androidx.databinding.BindingAdapter
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.geocheats.R
-import com.example.geocheats.database.Country
-
-@BindingAdapter("country_name")
-fun TextView.setCountryName(item: Country?) {
-    item?.let {
-        text = item.name
-    }
-}
+import com.example.geocheats.database.Guess
+import kotlinx.android.synthetic.main.list_item_guess.view.*
 
 
 @BindingAdapter("img_url")
