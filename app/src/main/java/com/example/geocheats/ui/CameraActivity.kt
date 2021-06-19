@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
-import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
@@ -20,12 +19,11 @@ import com.example.geocheats.R
 import com.example.geocheats.database.GuessDatabase
 import com.example.geocheats.databinding.ActivityCameraBinding
 import com.example.geocheats.ml.Planet
-import com.example.geocheats.utils.copyRGBToBuffer
+import com.example.geocheats.utils.copyBGRToBuffer
 import com.example.geocheats.utils.resize
 import com.example.geocheats.utils.toBitmap
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
@@ -33,16 +31,12 @@ import com.google.common.geometry.S2CellId
 import kotlinx.android.synthetic.main.activity_camera.*
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
-import org.tensorflow.lite.Interpreter
-import org.tensorflow.lite.support.image.TensorImage
 import timber.log.Timber
 import java.io.File
-import java.nio.ByteBuffer
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import kotlin.math.roundToInt
 
 
 class CameraActivity : AppCompatActivity() {
@@ -54,6 +48,7 @@ class CameraActivity : AppCompatActivity() {
     private val planet by lazy {
         Planet.newInstance(this)
     }
+
 
     private lateinit var binding: ActivityCameraBinding
     private lateinit var viewModelFactory: CameraViewModelFactory
@@ -72,7 +67,6 @@ class CameraActivity : AppCompatActivity() {
 
         binding.viewModel = viewModel
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?
-
 
 
         viewModel.state.observe(this) {
@@ -99,8 +93,6 @@ class CameraActivity : AppCompatActivity() {
         viewModel.capturedImage.observe(this, androidx.lifecycle.Observer {
             binding.capturedImage.setImageBitmap(it)
         })
-
-
 
 
         cameraCaptureButton.setOnClickListener {
@@ -147,8 +139,6 @@ class CameraActivity : AppCompatActivity() {
 
 
 
-
-
     private fun processPhoto() {
 
         val imageCapture = imageCapture ?: return
@@ -157,50 +147,36 @@ class CameraActivity : AppCompatActivity() {
             override fun onCaptureSuccess(image: ImageProxy) {
                 super.onCaptureSuccess(image)
 
-                var imageBitmap = BitmapFactory.decodeResource(resources, R.mipmap.hasseris)
-//                var imageBitmap = image.toBitmap()
-
+//                var imageBitmap = BitmapFactory.decodeResource(resources, R.mipmap.hasseris)
+                var imageBitmap = image.toBitmap()
                 viewModel.onCapture(imageBitmap.resize(640, 480))
-                imageBitmap = imageBitmap.resize(299, 299)
-                val imageBuffer = imageBitmap.copyRGBToBuffer()
-                
 
+                imageBitmap = imageBitmap.resize(299, 299)
+                val imageBuffer = imageBitmap.copyBGRToBuffer()
                 val inputFeature0 = TensorBuffer.createFixedSize(intArrayOf(1, 299, 299, 3), DataType.FLOAT32)
                 inputFeature0.loadBuffer(imageBuffer)
-
-
 
                 val outputs = planet.process(inputFeature0)
                 val outputsAsTensorBuffer = outputs.outputFeature0AsTensorBuffer
                 val index = outputsAsTensorBuffer.floatArray.indices.maxByOrNull { outputsAsTensorBuffer.floatArray[it] }
 
-
                 Timber.i("Output flat size: %s".format(outputsAsTensorBuffer.flatSize.toString()))
                 Timber.i("Output at 0, 1, 2: %f %f %f".format(outputsAsTensorBuffer.floatArray[0], outputsAsTensorBuffer.floatArray[1], outputsAsTensorBuffer.floatArray[2]))
                 Timber.i("Maximum index, maximum value: %d %f", index, outputsAsTensorBuffer.floatArray[index!!])
 
-
                 var geolocationToken = ""
-
-
-
-                val randomLocationCode = (Math.random() * 9000).roundToInt().toString()
-
                 csvReader().open(resources.openRawResource(R.raw.planet_v2_labelmap)) {
                     readAllAsSequence().forEach { row: List<String> ->
-                        if (row[0] == randomLocationCode) {
+                        if (row[0] == geolocationToken) {
                             geolocationToken = row[1]
                         }
                     }
                 }
 
-                val s2LatLng = S2CellId.fromToken(geolocationToken).toLatLng()
+//                val s2LatLng = S2CellId.fromToken(geolocationToken).toLatLng()
+//                val latLng = Pair(s2LatLng.lat().degrees(), s2LatLng.lng().degrees())
+                val latLng = Pair(57.059299, 9.935725)
 
-                val latLng = Pair(s2LatLng.lat().degrees(), s2LatLng.lng().degrees())
-
-
-                Timber.i("The geo code: %s".format(geolocationToken))
-                Timber.i("Lat lang: %f %f".format(latLng.first, latLng.second))
 
                 viewModel.onGuessed(latLng, 1.0f)
 

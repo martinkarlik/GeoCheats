@@ -2,17 +2,17 @@ package com.example.geocheats.utils
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.util.Log
 import timber.log.Timber
 import java.nio.ByteBuffer
 
 
-
 fun Bitmap.resize(dstWidth: Int, dstHeight: Int) : Bitmap {
     val bitmapRgb: Bitmap = this.copy(Bitmap.Config.ARGB_8888, true)
-    return Bitmap.createScaledBitmap(bitmapRgb, dstWidth, dstWidth, false)
+    return Bitmap.createScaledBitmap(bitmapRgb, dstWidth, dstHeight, false)
 }
 
-fun Bitmap.copyRGBToBuffer() : ByteBuffer {
+fun Bitmap.copyBGRToBuffer() : ByteBuffer {
 
     val buffer: ByteBuffer = ByteBuffer.allocate(width * height * 12)
     buffer.rewind()
@@ -26,11 +26,6 @@ fun Bitmap.copyRGBToBuffer() : ByteBuffer {
             buffer.putFloat(index, Color.blue(color) / 255.0f)
             buffer.putFloat(index + 4, Color.green(color) / 255.0f)
             buffer.putFloat(index + 8, Color.red(color) / 255.0f)
-
-//            if (y < 1 && x < 5) {
-//                Timber.i("Actually: %d %d %d".format(Color.red(color), Color.green(color), Color.blue(color)))
-//                Timber.i("In buffer: %f %f %f".format(buffer.getFloat(index), buffer.getFloat(index + 4), buffer.getFloat(index + 8)))
-//            }
 
         }
 
