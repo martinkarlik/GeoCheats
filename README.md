@@ -4,6 +4,8 @@ Mobile app that predicts the geolocation of a user-taken image, modelled as a s2
 
 # Screenshots
 
+[Preview screen](screenshot1.png)
+[Predicted geolocation](screenshot2.png)
 
 # References
 1 - T. Weyand, I. Kostrikov, and J. Philbin, “PlaNet - Photo Geolocation with Convolutional Neural Networks,” in Computer Vision – ECCV 2016, Cham, 2016, pp. 37–55. doi: 10.1007/978-3-319-46484-8_3.
